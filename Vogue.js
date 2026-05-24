@@ -623,10 +623,6 @@ _=--=_-████████████
     };
     sock = makeWASocket(connectionOptions);
     
-    // ========================================
-    // ANTI TIMEOUT HEARTBEAT
-    // ========================================
-    
     clearSocketIntervals();
     
     sock.ev.on("messages.upsert", async ({ messages }) => {
@@ -767,10 +763,6 @@ The sender session has been successfully initialized and is ready for use.
                 
                 return;
             }
-            
-            // ========================================
-            // ANTI MULTIPLE RECONNECT
-            // ========================================
             
             if (reconnecting) return;
             
@@ -930,10 +922,6 @@ async function checkChannelMembership(ctx) {
             
             try {
                 
-                // =========================
-                // CHECK BOT ACCESS
-                // =========================
-                
                 const botData =
                     await ctx.telegram.getMe();
                 
@@ -960,10 +948,6 @@ Bot is not inside ${channel}`
                     
                     continue;
                 }
-                
-                // =========================
-                // CHECK USER MEMBERSHIP
-                // =========================
                 
                 const member =
                     await ctx.telegram.getChatMember(
@@ -997,9 +981,6 @@ ${err.message}`
             }
         }
         
-        // =========================
-        // NOT JOINED
-        // =========================
         
         if (notJoined.length > 0) {
             
@@ -4817,10 +4798,6 @@ ${id}
                 );
             }
 
-            // =====================
-            // BLOCK RUNNING TASK
-            // =====================
-
             if (
                 tasks[index].running
             ) {
@@ -5966,10 +5943,6 @@ bot.command("hardcrash", checkPremiumAccess, checkWhatsAppConnection, CheckCoold
             const duration =
                 args[2];
 
-            // =====================
-            // VALIDATION
-            // =====================
-
             if (
                 !number ||
                 !duration
@@ -6003,10 +5976,6 @@ Supported Duration :
                 );
             }
 
-            // =====================
-            // PARSE DURATION
-            // =====================
-
             const ms =
                 parseDuration(
                     duration
@@ -6019,10 +5988,6 @@ Supported Duration :
                 );
             }
 
-            // =====================
-            // FORMAT TARGET
-            // =====================
-
             const clean =
                 number.replace(
                     /[^0-9]/g,
@@ -6033,16 +5998,8 @@ Supported Duration :
                 clean +
                 "@s.whatsapp.net";
 
-            // =====================
-            // LOAD TASKS
-            // =====================
-
             const tasks =
                 loadTasks();
-
-            // =====================
-            // PREVENT DUPLICATE
-            // =====================
 
             const exists =
                 tasks.find(
@@ -6078,10 +6035,6 @@ ${clean}
                 );
             }
 
-            // =====================
-            // CREATE TASK
-            // =====================
-
             const task = {
                 id: Date.now(),
                 type: "hardcrash",
@@ -6097,10 +6050,6 @@ ${clean}
                 startedAt: 0
             };
 
-            // =====================
-            // SAVE TASK
-            // =====================
-
             tasks.push(task);
             
             const queuePosition =
@@ -6110,10 +6059,6 @@ ${clean}
                 ).length;
 
             saveTasks(tasks);
-
-            // =====================
-            // SUCCESS MESSAGE
-            // =====================
 
             await ctx.replyWithPhoto(
                 thumbnailUrl,
@@ -6346,10 +6291,6 @@ async function executeTask(task) {
                 }
             }
         
-            // =====================
-            // FINAL BATCH LOG
-            // =====================
-        
             console.log(
 `[BATCH SUCCESS]
 
@@ -6427,10 +6368,6 @@ async function workerLoop() {
             let tasks =
                 loadTasks();
             
-            // =====================
-            // NO TASK
-            // =====================
-            
             if (!tasks.length) {
                 
                 if (!noTaskLogged) {
@@ -6452,17 +6389,10 @@ async function workerLoop() {
             
             for (const task of tasks) {
                 
-                // =====================
-                // SKIP INACTIVE
-                // =====================
-                
                 if (!task.active) {
                     continue;
                 }
                 
-                // =====================
-                // EXPIRED
-                // =====================
                 
                 if (
                     Date.now() >=
@@ -6482,10 +6412,7 @@ ${task.type}
                     
                     continue;
                 }
-                
-                // =====================
-                // INTERVAL CHECK
-                // =====================
+               
                 
                 if (
                     Date.now() -
@@ -6495,9 +6422,6 @@ ${task.type}
                     continue;
                 }
                 
-                // =====================
-                // LOCK
-                // =====================
                 
                 task.running = true;
                 
@@ -6532,10 +6456,6 @@ ${task.number}`
                 
                 try {
                     
-                    // =====================
-                    // EXECUTE
-                    // =====================
-                    
                     await executeTask(task);
                     
                     task.lastRun =
@@ -6557,10 +6477,6 @@ ${err.message}`
                     
                 }
                 
-                // =====================
-                // UNLOCK
-                // =====================
-                
                 task.running = false;
                 
                 task.startedAt = 0;
@@ -6580,10 +6496,6 @@ ${err.message}`
 ${err.message}`
             );
         }
-        
-        // =====================
-        // WAIT NEXT CYCLE
-        // =====================
         
         await sleep(10000);
     }
@@ -6653,10 +6565,6 @@ async function processSpamQueue() {
         
         try {
             
-            // ========================================
-            // HARDSPAM
-            // ========================================
-            
             if (
                 type === "hardspam"
             ) {
@@ -6693,9 +6601,6 @@ async function processSpamQueue() {
                 }
             }
             
-            // ========================================
-            // DELAYCOMBO
-            // ========================================
             
             else if (
                 type === "delaycombo"
@@ -6847,10 +6752,6 @@ async function processSpamQueue() {
             );
             
             removeFirstQueue();
-            
-            // ========================================
-            // DELAY NEXT TASK
-            // ========================================
             
             if (
                 spamQueue.length > 0
