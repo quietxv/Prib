@@ -282,6 +282,7 @@ let reconnectTimeout;
 let presenceInterval;
 let currentStyleIndex = 0;
 let workerStarted = false;
+let noTaskLogged = false;
 const activeButtons = new Map();
 const TASK_FILE ="./database/sendtasks.json";
 
@@ -6114,10 +6115,6 @@ function compareVersions(v1, v2) {
 async function executeTask(task) {
     switch (task.type) {
 
-        // =====================
-        // SEND MESSAGE
-        // =====================
-
         case "hardcrash":
 
             for (let i = 0;i < task.batch;i++) {
@@ -6134,10 +6131,6 @@ ${e.message}`
             }
 
         break;
-
-        // =====================
-        // SEND IMAGE
-        // =====================
 
         case "sendimage":
 
@@ -6167,10 +6160,6 @@ ${e.message}`
 
         break;
 
-        // =====================
-        // BACKUP
-        // =====================
-
         case "backup":
 
             try {
@@ -6187,10 +6176,6 @@ ${e.message}`
 
         break;
 
-        // =====================
-        // DEFAULT
-        // =====================
-
         default:
 
             console.log(
@@ -6201,93 +6186,110 @@ ${task.type}`
 }
 
 async function startUniversalWorker() {
-
+    
     if (workerStarted) {
         return;
     }
-
+    
     workerStarted = true;
-
+    
     console.log(
-        "[VOGUE CRASHER] initializing Done!"
+        "[VOGUE CRASHER] Initializing Done!"
     );
-
+    
     setInterval(async () => {
-
+        
         let tasks =
             loadTasks();
-            
+        
+        // =====================
+        // NO TASK
+        // =====================
+        
         if (!tasks.length) {
-            return console.log("[VOGUE CRASHER] No task loaded!");
+            
+            if (!noTaskLogged) {
+                
+                console.log(
+                    "[VOGUE CRASHER] No task loaded!"
+                );
+                
+                noTaskLogged = true;
+            }
+            
+            return;
         }
-
+        
+        // reset flag if task exists
+        noTaskLogged = false;
+        
         let changed =
             false;
-
+        
         for (const task of tasks) {
-
+            
             // =====================
             // SKIP INACTIVE
             // =====================
-
+            
             if (!task.active) {
                 continue;
             }
-
+            
             // =====================
             // FIX STUCK TASK
             // =====================
-
+            
             if (
                 task.running &&
                 Date.now() -
                 (task.startedAt || 0) >
                 600000
             ) {
-
+                
                 task.running = false;
-
+                
                 console.log(
                     `[TASK RESET]
 ${task.id}`
                 );
-
+                
                 changed = true;
             }
-
+            
             // =====================
             // PREVENT OVERLAP
             // =====================
-
+            
             if (task.running) {
                 continue;
             }
-
+            
             // =====================
             // EXPIRED
             // =====================
-
+            
             if (
                 Date.now() >=
                 task.endTime
             ) {
-
+                
                 task.active = false;
-
+                
                 console.log(
                     `[TASK EXPIRED]
 ${task.type} -> ${task.number}`
                 );
-
+                
                 changed = true;
-
+                
                 continue;
             }
-
+            
             // =====================
             // INTERVAL CHECK
             // =====================
-
+            
             if (
                 Date.now() -
                 task.lastRun <
@@ -6295,57 +6297,57 @@ ${task.type} -> ${task.number}`
             ) {
                 continue;
             }
-
+            
             try {
-
+                
                 // =====================
                 // LOCK TASK
                 // =====================
-
+                
                 task.running = true;
-
+                
                 task.startedAt =
                     Date.now();
-
+                
                 changed = true;
-
+                
                 console.log(
                     `[TASK START]
 ${task.type} -> ${task.number}`
                 );
-
+                
                 // =====================
                 // EXECUTE
                 // =====================
-
+                
                 await executeTask(task);
-
+                
                 // =====================
                 // SUCCESS
                 // =====================
-
+                
                 task.lastRun =
                     Date.now();
-
+                
                 task.running = false;
-
+                
                 task.startedAt = 0;
-
+                
                 changed = true;
-
+                
                 console.log(
                     `[TASK DONE]
 ${task.type} -> ${task.number}`
                 );
-
+                
             } catch (err) {
-
+                
                 task.running = false;
-
+                
                 task.startedAt = 0;
-
+                
                 changed = true;
-
+                
                 console.log(
                     `[TASK ERROR]
 ${task.type}
@@ -6354,15 +6356,15 @@ ${err.message}`
                 );
             }
         }
-
+        
         // =====================
         // SAVE
         // =====================
-
+        
         if (changed) {
             saveTasks(tasks);
         }
-
+        
     }, 10000);
 }
 
