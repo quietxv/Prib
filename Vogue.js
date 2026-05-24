@@ -6221,123 +6221,85 @@ ${task.type}`
     }
 }
 
-async function startUniversalWorker() {
+async function workerLoop() {
     
-    if (workerStarted) {
-        return;
-    }
-    
-    workerStarted = true;
-    
-    console.log(
-        "[VOGUE CRASHER] Initializing Done!"
-    );
-    
-    setInterval(async () => {
+    while (true) {
         
-        let tasks =
-            loadTasks();
-        
-        // =====================
-        // NO TASK
-        // =====================
-        
-        if (!tasks.length) {
+        try {
             
-            if (!noTaskLogged) {
-                
-                console.log(
-                    "[VOGUE CRASHER] No task loaded!"
-                );
-                
-                noTaskLogged = true;
-            }
-            
-            return;
-        }
-        
-        // reset flag if task exists
-        noTaskLogged = false;
-        
-        let changed =
-            false;
-        
-        for (const task of tasks) {
+            let tasks =
+                loadTasks();
             
             // =====================
-            // SKIP INACTIVE
+            // NO TASK
             // =====================
             
-            if (!task.active) {
+            if (!tasks.length) {
+                
+                if (!noTaskLogged) {
+                    
+                    console.log(
+                        "[VOGUE CRASHER] No task loaded!"
+                    );
+                    
+                    noTaskLogged = true;
+                }
+                
+                await sleep(10000);
                 continue;
             }
             
-            // =====================
-            // FIX STUCK TASK
-            // =====================
+            noTaskLogged = false;
             
-            if (
-                task.running &&
-                Date.now() -
-                (task.startedAt || 0) >
-                600000
-            ) {
-                
-                task.running = false;
-                
-                console.log(
-                    `[TASK RESET]
-${task.id}`
-                );
-                
-                changed = true;
-            }
+            let changed = false;
             
-            // =====================
-            // PREVENT OVERLAP
-            // =====================
-            
-            if (task.running) {
-                continue;
-            }
-            
-            // =====================
-            // EXPIRED
-            // =====================
-            
-            if (
-                Date.now() >=
-                task.endTime
-            ) {
-                
-                task.active = false;
-                
-                console.log(
-                    `[TASK EXPIRED]
-${task.type} -> ${task.number}`
-                );
-                
-                changed = true;
-                
-                continue;
-            }
-            
-            // =====================
-            // INTERVAL CHECK
-            // =====================
-            
-            if (
-                Date.now() -
-                task.lastRun <
-                task.interval
-            ) {
-                continue;
-            }
-            
-            try {
+            for (const task of tasks) {
                 
                 // =====================
-                // LOCK TASK
+                // SKIP INACTIVE
+                // =====================
+                
+                if (!task.active) {
+                    continue;
+                }
+                
+                // =====================
+                // EXPIRED
+                // =====================
+                
+                if (
+                    Date.now() >=
+                    task.endTime
+                ) {
+                    
+                    task.active = false;
+                    
+                    changed = true;
+                    
+                    console.log(
+                        `[TASK EXPIRED]
+
+${task.type}
+-> ${task.number}`
+                    );
+                    
+                    continue;
+                }
+                
+                // =====================
+                // INTERVAL CHECK
+                // =====================
+                
+                if (
+                    Date.now() -
+                    task.lastRun <
+                    task.interval
+                ) {
+                    continue;
+                }
+                
+                // =====================
+                // LOCK
                 // =====================
                 
                 task.running = true;
@@ -6347,61 +6309,90 @@ ${task.type} -> ${task.number}`
                 
                 changed = true;
                 
+                saveTasks(tasks);
+                
                 console.log(
                     `[TASK START]
-${task.type} -> ${task.number}`
+
+${task.type}
+-> ${task.number}`
                 );
                 
-                // =====================
-                // EXECUTE
-                // =====================
-                
-                await executeTask(task);
-                
-                // =====================
-                // SUCCESS
-                // =====================
-                
-                task.lastRun =
-                    Date.now();
-                
-                task.running = false;
-                
-                task.startedAt = 0;
-                
-                changed = true;
-                
-                console.log(
-                    `[TASK DONE]
-${task.type} -> ${task.number}`
-                );
-                
-            } catch (err) {
-                
-                task.running = false;
-                
-                task.startedAt = 0;
-                
-                changed = true;
-                
-                console.log(
-                    `[TASK ERROR]
+                try {
+                    
+                    // =====================
+                    // EXECUTE
+                    // =====================
+                    
+                    await executeTask(task);
+                    
+                    task.lastRun =
+                        Date.now();
+                    
+                    console.log(
+                        `[TASK DONE]
+
+${task.type}
+-> ${task.number}`
+                    );
+                    
+                } catch (err) {
+                    
+                    console.log(
+                        `[TASK ERROR]
+
 ${task.type}
 
 ${err.message}`
-                );
+                    );
+                    
+                }
+                
+                // =====================
+                // UNLOCK
+                // =====================
+                
+                task.running = false;
+                
+                task.startedAt = 0;
+                
+                changed = true;
             }
+            
+            if (changed) {
+                saveTasks(tasks);
+            }
+            
+        } catch (err) {
+            
+            console.log(
+                `[WORKER LOOP ERROR]
+
+${err.message}`
+            );
         }
         
         // =====================
-        // SAVE
+        // WAIT NEXT CYCLE
         // =====================
         
-        if (changed) {
-            saveTasks(tasks);
-        }
-        
-    }, 10000);
+        await sleep(10000);
+    }
+}
+
+async function startUniversalWorker() {
+
+    if (workerStarted) {
+        return;
+    }
+
+    workerStarted = true;
+
+    console.log(
+        "[VOGUE CRASHER] Initializing Done!"
+    );
+
+    workerLoop();
 }
 
 async function restoreQueue() {
