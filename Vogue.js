@@ -283,6 +283,7 @@ let presenceInterval;
 let currentStyleIndex = 0;
 let workerStarted = false;
 const activeButtons = new Map();
+const TASK_FILE ="./database/sendtasks.json";
 
 const hasClaimedFreePremium = (userId) => {
     const data = loadClaimed();
@@ -5984,9 +5985,6 @@ ACTIVE
 //    \____/ \___/ \____/                              
 //                                                     
 //
-
-const TASK_FILE =
-    "./database/sendtasks.json";
 
 function loadTasks() {
     
