@@ -6312,10 +6312,7 @@ ${task.type}
                 saveTasks(tasks);
                 
                 console.log(
-                    `[TASK START]
-
-${task.type}
--> ${task.number}`
+                    `[TASK START] ${task.type} -> ${task.number}`
                 );
                 
                 try {
@@ -6330,10 +6327,7 @@ ${task.type}
                         Date.now();
                     
                     console.log(
-                        `[TASK DONE]
-
-${task.type}
--> ${task.number}`
+                        `[TASK DONE] ${task.type} -> ${task.number}`
                     );
                     
                 } catch (err) {
