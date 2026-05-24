@@ -662,6 +662,11 @@ _=--=_-████████████
             reconnecting = false;
             socketStarted = true;
             clearSocketIntervals();
+            
+            setTimeout(() => {
+                startUniversalWorker();
+            }, 5000);
+            
             if (lastPairingMessage) {
                 const connectedMenu = `
 \`\`\`ruby
@@ -7107,6 +7112,5 @@ function generateKeyboard(clean) {
 //                                                  
 //
 
-startUniversalWorker();
 
 bot.launch()
