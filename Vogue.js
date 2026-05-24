@@ -6209,13 +6209,17 @@ async function startUniversalWorker() {
     workerStarted = true;
 
     console.log(
-        "[WORKER] Universal worker started"
+        "[VOGUE CRASHER] initializing Done!"
     );
 
     setInterval(async () => {
 
         let tasks =
             loadTasks();
+            
+        if (!tasks.length) {
+            return console.log("[VOGUE CRASHER] No task loaded!");
+        }
 
         let changed =
             false;
