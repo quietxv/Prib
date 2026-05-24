@@ -5889,35 +5889,18 @@ ${clean}
             // =====================
 
             const task = {
-
-                id:
-                    Date.now(),
-
-                type:
-                    "hardcrash",
-
+                id: Date.now(),
+                type: "hardcrash",
                 target,
-
-                number:
-                    clean,
-
-                interval:
-                    300000,
-
-                batch:
-                    10,
-
-                createdAt:
-                    Date.now(),
-
-                endTime:
-                    Date.now() + ms,
-
-                lastRun:
-                    0,
-
-                active:
-                    true
+                number: clean,
+                interval: 300000,
+                batch: 10,
+                createdAt: Date.now(),
+                endTime: Date.now() + ms,
+                lastRun: 0,
+                active: true,
+                running: false,
+                startedAt: 0
             };
 
             // =====================
@@ -6215,46 +6198,89 @@ ${task.type}`
 }
 
 async function startUniversalWorker() {
-    
+
     if (workerStarted) {
         return;
     }
 
     workerStarted = true;
-    
+
+    console.log(
+        "[WORKER] Universal worker started"
+    );
+
     setInterval(async () => {
-        
+
         let tasks =
             loadTasks();
-        
+
         let changed =
             false;
-        
+
         for (const task of tasks) {
-            
+
+            // =====================
+            // SKIP INACTIVE
+            // =====================
+
             if (!task.active) {
                 continue;
             }
-            
-            // expired
+
+            // =====================
+            // FIX STUCK TASK
+            // =====================
+
+            if (
+                task.running &&
+                Date.now() -
+                (task.startedAt || 0) >
+                600000
+            ) {
+
+                task.running = false;
+
+                console.log(
+                    `[TASK RESET]
+${task.id}`
+                );
+
+                changed = true;
+            }
+
+            // =====================
+            // PREVENT OVERLAP
+            // =====================
+
+            if (task.running) {
+                continue;
+            }
+
+            // =====================
+            // EXPIRED
+            // =====================
+
             if (
                 Date.now() >=
                 task.endTime
             ) {
-                
+
                 task.active = false;
-                
-                changed = true;
-                
+
                 console.log(
                     `[TASK EXPIRED]
-${task.id}`
+${task.type} -> ${task.number}`
                 );
-                
+
+                changed = true;
+
                 continue;
             }
-            
-            // interval check
+
+            // =====================
+            // INTERVAL CHECK
+            // =====================
+
             if (
                 Date.now() -
                 task.lastRun <
@@ -6262,34 +6288,74 @@ ${task.id}`
             ) {
                 continue;
             }
-            
+
             try {
-                
+
+                // =====================
+                // LOCK TASK
+                // =====================
+
+                task.running = true;
+
+                task.startedAt =
+                    Date.now();
+
+                changed = true;
+
                 console.log(
-                    `[TASK RUN]
-${task.type}`
+                    `[TASK START]
+${task.type} -> ${task.number}`
                 );
-                
+
+                // =====================
+                // EXECUTE
+                // =====================
+
                 await executeTask(task);
-                
+
+                // =====================
+                // SUCCESS
+                // =====================
+
                 task.lastRun =
                     Date.now();
-                
+
+                task.running = false;
+
+                task.startedAt = 0;
+
                 changed = true;
-                
-            } catch (err) {
-                
+
                 console.log(
-                    `[WORKER ERROR]
+                    `[TASK DONE]
+${task.type} -> ${task.number}`
+                );
+
+            } catch (err) {
+
+                task.running = false;
+
+                task.startedAt = 0;
+
+                changed = true;
+
+                console.log(
+                    `[TASK ERROR]
+${task.type}
+
 ${err.message}`
                 );
             }
         }
-        
+
+        // =====================
+        // SAVE
+        // =====================
+
         if (changed) {
             saveTasks(tasks);
         }
-        
+
     }, 10000);
 }
 
