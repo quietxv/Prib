@@ -4764,6 +4764,193 @@ ${err.stack || err.message}
     }
 });
 
+bot.command("removetask", async (ctx) => {
+        try {
+
+            const args =
+                ctx.message.text.split(" ");
+
+            const id =
+                Number(args[1]);
+
+            if (!id) {
+
+                return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+REMOVE TASK
+━━━━━━━━━━━━━━━━━━━━━━
+
+Usage :
+/removetask taskid
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Example :
+/removetask 17480921
+`
+                );
+            }
+
+            let tasks =
+                loadTasks();
+
+            const index =
+                tasks.findIndex(
+                    x =>
+                        x.id === id
+                );
+
+            if (index < 0) {
+
+                return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+TASK NOT FOUND
+━━━━━━━━━━━━━━━━━━━━━━
+
+Task ID :
+${id}
+`
+                );
+            }
+
+            // =====================
+            // BLOCK RUNNING TASK
+            // =====================
+
+            if (
+                tasks[index].running
+            ) {
+
+                return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+TASK RUNNING
+━━━━━━━━━━━━━━━━━━━━━━
+
+This task is currently
+being executed and
+cannot be removed.
+`
+                );
+            }
+
+            const removed =
+                tasks.splice(index, 1)[0];
+
+            saveTasks(tasks);
+
+            return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+TASK REMOVED
+━━━━━━━━━━━━━━━━━━━━━━
+
+◈ ID :
+${removed.id}
+
+◈ Type :
+${removed.type}
+
+◈ Target :
+${removed.number}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Queue successfully removed.
+`
+            );
+
+        } catch (err) {
+
+            console.log(err);
+
+            ctx.reply(
+                err.message
+            );
+        }
+    });
+
+bot.command("queue", async (ctx) => {
+        try {
+
+            const tasks =
+                loadTasks()
+                .filter(
+                    x => x.active
+                );
+
+            if (!tasks.length) {
+
+                return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+QUEUE STATUS
+━━━━━━━━━━━━━━━━━━━━━━
+
+No active queue found.
+`
+                );
+            }
+
+            let text =
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+QUEUE STATUS
+━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+            tasks.forEach(
+                (
+                    task,
+                    index
+                ) => {
+
+                    text +=
+
+`
+
+#${index + 1}
+
+ID :
+${task.id}
+
+Type :
+${task.type}
+
+Target :
+${task.number}
+
+Status :
+${
+task.running
+? "RUNNING"
+: "WAITING"
+}
+
+━━━━━━━━━━━━━━━━━━━━━━
+`;
+                }
+            );
+
+            return ctx.reply(text);
+
+        } catch (err) {
+
+            console.log(err);
+
+            ctx.reply(
+                err.message
+            );
+        }
+    });
 
 //                                                    
 //     _____ ________  ______  ___  ___   _   _______ 
@@ -5915,6 +6102,12 @@ ${clean}
             // =====================
 
             tasks.push(task);
+            
+            const queuePosition =
+                tasks.filter(
+                    x =>
+                        x.active
+                ).length;
 
             saveTasks(tasks);
 
@@ -5924,19 +6117,21 @@ ${clean}
 
             await ctx.replyWithPhoto(
                 thumbnailUrl,
-
                 {
                     caption:
-
-`\`\`\`ruby
+            
+            `\`\`\`ruby
 ━━━━━━━━━━━━━━━━━━━━━━
 V O G U E • C R A S H E R
 ━━━━━━━━━━━━━━━━━━━━━━
 
 〔 TASK CREATED 〕
 
+◈ Task ID :
+${task.id}
+
 ◈ Type :
-hardcrash
+${task.type}
 
 ◈ Target :
 ${clean}
@@ -5944,21 +6139,23 @@ ${clean}
 ◈ Duration :
 ${duration}
 
+◈ Queue Position :
+#${queuePosition}
+
 ━━━━━━━━━━━━━━━━━━━━━━
 
-Task successfully added to persistent scheduler.
+Task successfully added
+to persistent scheduler.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
 System Status :
-ACTIVE
+QUEUED
 \`\`\`
 `,
-                    parse_mode:
-                        "Markdown"
+                    parse_mode: "Markdown"
                 }
             );
-
         } catch (err) {
 
             console.log(err);
@@ -6311,9 +6508,27 @@ ${task.type}
                 
                 saveTasks(tasks);
                 
+                const queuePosition =
+                    tasks
+                    .filter(
+                        x =>
+                            x.active
+                    )
+                    .findIndex(
+                        x =>
+                            x.id === task.id
+                    ) + 1;
+                
                 console.log(
-                    `[TASK START] ${task.type} -> ${task.number}`
-                );
+    `[TASK START]
+
+Position :
+#${queuePosition}
+Type :
+/${task.type}
+Target :
+${task.number}`
+);
                 
                 try {
                     
